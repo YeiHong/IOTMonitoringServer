@@ -10,6 +10,43 @@ from django.conf import settings
 
 client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION1, settings.MQTT_USER_PUB)
 
+def alerta_peligro():
+    print("Calulando alertas de peligro...")
+    data = Data.objects.filter(
+        base_time__gte=datetime.now() - timedelta(hours=1))
+    aggregation = data.annotate(check_value=Avg('avg_value')) \
+        .select_related('station', 'measurement') \
+        .select_related('station__user', 'station__location') \
+        .select_related('station__location__city', 'station__location__state',
+                        'station__location__country') \
+        .values('check_value', 'station__user__username',
+                'measurement__name',
+                'measurement__max_value',
+                'measurement__min_value',
+                'station__location__city__name',
+                'station__location__state__name',
+                'station__location__country__name')
+    for item in aggregation:
+        alerta = False
+
+        medidad = item["measurement_name"]
+        max_valor = item["measurement__max_value"] or 0
+
+        country = item['station__location__country__name']
+        state = item['station__location__state__name']
+        city = item['station__location__city__name']
+        user = item['station__user__username']
+
+        if medidad == "temperatura" and max_valor > 39:
+            alerta = True
+        
+        if alerta:
+            message = "ALERTA! la temperatura ha alcanzado {max_valor}"
+            topic = '{}/{}/{}/{}/in'.format(country, state, city, user)
+            print(datetime.now(), "Sending alert to {} {}".format(topic, medidad))
+            client.publish(topic, message)
+
+
 
 def analyze_data():
     # Consulta todos los datos de la última hora, los agrupa por estación y variable
@@ -106,7 +143,10 @@ def start_cron():
     '''
     print("Iniciando cron...")
     schedule.every(5).minutes.do(analyze_data)
+    print("Iniciando segunda alarma...")
+    schedule.every(1).minutes.do(alerta_peligro)
     print("Servicio de control iniciado")
+
     while 1:
         schedule.run_pending()
         time.sleep(1)
