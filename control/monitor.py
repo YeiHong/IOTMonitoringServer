@@ -34,6 +34,7 @@ def analyze_data():
     alerts = 0
     for item in aggregation:
         alert = False
+        alerta = False
 
         variable = item["measurement__name"]
         max_value = item["measurement__max_value"] or 0
@@ -47,6 +48,9 @@ def analyze_data():
         if item["check_value"] > max_value or item["check_value"] < min_value:
             alert = True
 
+        if variable == "temperatura" and max_value > 39 and country == "colombia":
+            alerta = True
+
         if alert:
             message = "ALERT {} {} {}".format(variable, min_value, max_value)
             print(message)
@@ -54,6 +58,13 @@ def analyze_data():
             print(datetime.now(), "Sending alert to {} {}".format(topic, variable))
             client.publish(topic, message)
             alerts += 1
+
+        if alerta:
+            message = "ALERT La temperatura esta en {} por encima de los 39 grados seguros".format(max_value)
+            print(message)
+            topic = '{}/{}/{}/{}/in'.format(country, state, city, user)
+            print(datetime.now(), "Sending alert to {} {}".format(topic, variable))
+            client.publish(topic, message)
     
     print(len(aggregation), "dispositivos revisados")
     print(alerts, "alertas enviadas")
