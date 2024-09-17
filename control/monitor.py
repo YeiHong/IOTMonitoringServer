@@ -53,6 +53,7 @@ def analyze_data():
 
         if alerta:
             message = "ALERT {} {}".format(variable, max_value)
+            print(message)
             topic = '{}/{}/{}/{}/in'.format(country, state, city, user)
             print(datetime.now(), "Sending alert to {} {}".format(topic, variable))
             client.publish(topic, message)
@@ -60,12 +61,13 @@ def analyze_data():
 
         if alert:
             message = "ALERT {} {} {}".format(variable, min_value, max_value)
+            print(message)
             topic = '{}/{}/{}/{}/in'.format(country, state, city, user)
             print(datetime.now(), "Sending alert to {} {}".format(topic, variable))
             client.publish(topic, message)
             alerts += 1
     
-    print("Alerta 2 is {alerta}")
+    print("Alerta 1 is {} Alerta 2 is {}").format(alert, alerta)
     print(len(aggregation), "dispositivos revisados")
     print(alerts, "alertas enviadas")
 
